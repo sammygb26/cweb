@@ -3,35 +3,27 @@ import jax.numpy as jnp
 
 from jax.scipy.special import factorial
 
+from cweb.permanent import calculate_permanent
+from cweb.validation import validate_tensor_of_square_matrixces
+
 n = 4   # Max number of photons
 m = 10  # Number of modes
 
 
 @jax.jit
-def calculate_indexing_matrix(fock : jnp.array):
+def calculate_indexing_matrix(U : jnp.array, fock : jnp.array):
     """
-    Constructs an (...,n,m) indexing matrix from a (...,m) fock state tensor. This is used to convert an (m,m) matrix into
-    an (...,n,m)  matrix with rows repeated per the photon count in the fock state.
+    Constructs an (n,m) indexing matrix from a (n) fock state tensor. This is used to convert an (m,m) matrix into
+    an (n,m) matrix with rows repeated per the photon count in the fock state.
 
     Args:
-        fock (jnp.array): A tensor of fock states (...,m) where fock[...,i] is the number of photons in mode i.
+        fock (jnp.array): A tensor of fock states (n) where fock[i] is the mode photon i is in.
 
     Returns:
-        jnp.array: A binary tensor (...,n,m) to map (m,m) matrices to (...,n,m) tensor repeating each row per the number of photons.
+        jnp.array: A binary tensor (n,m) to map (m,m) matrices to (n,m) tensor repeating each row per the number of photons.
     """
-    start = jnp.cumsum(jnp.roll(fock, shift=1).at[...,0].set(0), axis=-1)
-    end   = jnp.cumsum(         fock                           , axis=-1)
-
-    ind = jnp.arange(n)
-
-    after_start = ind[...,:,None] >= start[...,None,:]
-    before_end  = ind[...,:,None]  < end  [...,None,:]
-
-    # Convert to integer
-    matrix = 1 * (after_start & before_end) 
-
-    return matrix
-
+    m = validate_tensor_of_square_matrixces(U)
+    return 1 * (jnp.arange(m)[None,:] == fock[:,None])
 
 
 @jax.jit
@@ -40,20 +32,44 @@ def calculate_amplitude(
     fock_in  : jnp.array,
     fock_out : jnp.array):
     """
-    Calculates the transition amplitude between two for a multi-mode fock states (...,n) for a given unitary tensor (m,m).
+    Calculates the transition amplitude between two for a multi-mode fock states (n) for a given unitary tensor (...,m,m).
 
     Args:
         U (jnp.array) 
     """
+    m = validate_tensor_of_square_matrixces(U)
 
     # Calculate facatorials
-    f1 = jnp.sum(factorial(fock_in ), axis=-1)
-    f2 = jnp.sum(factorial(fock_out), axis=-1)
+    counts_in  = jnp.sum(jnp.arange(m)[None, :] == fock_in[:, None], axis=0)
+    counts_out = jnp.sum(jnp.arange(m)[None, :] == fock_in[:, None], axis=0)
+
+    f1 = jnp.prod(factorial(counts_in ))
+    f2 = jnp.prod(factorial(counts_out))
 
     # Transform unitary repeating rows and columns per fock_in and fock_out
-    S_in  = calculate_indexing_matrix(fock_in)
-    S_out = calculate_indexing_matrix(fock_out)
+    S_in  = calculate_indexing_matrix(U, fock_in)
+    S_out = calculate_indexing_matrix(U, fock_out)
 
-    p = S_out @ U @ jnp.matrix_transpose(S_in) 
 
-    return jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
+    p = S_out @ U @ S_in.T
+    amplitude = jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
+    
+    jax.debug.print(
+        'U={U}\n' +
+        'fock_in={fock_in}\n' + 
+        'fock_out={fock_out}\n' +
+        'counts_in={counts_in}\n' +
+        'counts_out={counts_out}\n' +
+        'f1={f1}\n' + 
+        'f2={f2}\n' + 
+        'p={p}\n',
+        U=U,
+        fock_in=fock_in,
+        fock_out=fock_out,
+        counts_in=counts_in,
+        counts_out=counts_out,
+        f1=f1,
+        f2=f2,
+        p=p)
+
+    return amplitude
