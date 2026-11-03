@@ -4,7 +4,10 @@ import jax.numpy as jnp
 from cweb.validation import validate_tensor_of_square_matrixces
 
 @jax.jit
-def calculate_gray_vector(A, k):
+def calculate_gray_vector(
+    A : jnp.array, 
+    k : int
+    ) -> jnp.array:
     """
     Calculates a binary vector of the kth element of the gray code.
 
@@ -25,7 +28,10 @@ def calculate_gray_vector(A, k):
     return gray
 
 @jax.jit
-def calculate_gray_update(A : jnp.array, k : int) -> jnp.array:
+def calculate_gray_update(
+    A : jnp.array, 
+    k : int
+    ) -> jnp.array:
     """
     Calculates a gray update tensor for a given index (int) and input tensor of square matrices (...,n,n).
 
@@ -53,7 +59,9 @@ def calculate_gray_update(A : jnp.array, k : int) -> jnp.array:
 
 
 @jax.jit
-def calculate_permanent(A : jnp.array) -> jnp.array:
+def calculate_permanent(
+    A : jnp.array
+    ) -> jnp.array:
     """
     Calculates the permanent of a tensor of square matrices (...,n,n) using ryser's formula.
 

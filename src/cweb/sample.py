@@ -6,12 +6,11 @@ from jax.scipy.special import factorial
 from cweb.permanent import calculate_permanent
 from cweb.validation import validate_tensor_of_square_matrixces
 
-n = 4   # Max number of photons
-m = 10  # Number of modes
-
-
 @jax.jit
-def calculate_indexing_matrix(U : jnp.array, fock : jnp.array):
+def calculate_indexing_matrix(
+    U : jnp.array, 
+    fock : jnp.array
+    ) -> jnp.array:
     """
     Constructs an (n,m) indexing matrix from a (n) fock state tensor. This is used to convert an (m,m) matrix into
     an (n,m) matrix with rows repeated per the photon count in the fock state.
@@ -30,12 +29,18 @@ def calculate_indexing_matrix(U : jnp.array, fock : jnp.array):
 def calculate_amplitude(
     U        : jnp.array,
     fock_in  : jnp.array,
-    fock_out : jnp.array):
+    fock_out : jnp.array
+    ) -> jnp.array:
     """
     Calculates the transition amplitude between two for a multi-mode fock states (n) for a given unitary tensor (...,m,m).
 
     Args:
-        U (jnp.array) 
+        U        (jnp.array) : A tensor of m mode unitary matrices to be validated (...,m,m)
+        fock_in  (jnp.array) : A vector of photon mode indicies (n) for the input fock state.
+        fock_out (jnp.array) : A vector of photon mode indicies (n) for the output fock state.
+
+    Returns:
+        (jnp.array) : A tensor of amplitudes for the input unitaries (...).
     """
     m = validate_tensor_of_square_matrixces(U)
 
@@ -54,24 +59,43 @@ def calculate_amplitude(
     p = S_out @ U @ S_in.T
     a = jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
     
-    jax.debug.print(
-        'U={U}\n' +
-        'fock_in={fock_in}\n' + 
-        'fock_out={fock_out}\n' +
-        'counts_in={counts_in}\n' +
-        'counts_out={counts_out}\n' +
-        'f1={f1}\n' + 
-        'f2={f2}\n' + 
-        'p={p}\n'
-        'a={a}',
-        U=U,
-        fock_in=fock_in,
-        fock_out=fock_out,
-        counts_in=counts_in,
-        counts_out=counts_out,
-        f1=f1,
-        f2=f2,
-        p=p,
-        a=a)
+    #jax.debug.print(
+    #    'U={U}\n' +
+    #    'fock_in={fock_in}\n' + 
+    #    'fock_out={fock_out}\n' +
+    #    'counts_in={counts_in}\n' +
+    #    'counts_out={counts_out}\n' +
+    #    'f1={f1}\n' + 
+    #    'f2={f2}\n' + 
+    #    'p={p}\n'
+    #    'a={a}',
+    #    U=U,
+    #    fock_in=fock_in,
+    #    fock_out=fock_out,
+    #    counts_in=counts_in,
+    #    counts_out=counts_out,
+    #    f1=f1,
+    #    f2=f2,
+    #    p=p,
+    #    a=a)
 
     return a
+
+def calculate_probability(
+    U        : jnp.array,
+    fock_in  : jnp.array,
+    fock_out : jnp.array
+    ) -> jnp.array:
+    """
+    Calculates the probability of an output fock state being measured for a given input fock state for each unitary in a tensor of unitaries (...,m,m).
+
+    Args:
+        U        (jnp.array) : A tensor of m mode unitary matrices to be validated (...,m,m)
+        fock_in  (jnp.array) : A vector of photon mode indicies (n) for the input fock state.
+        fock_out (jnp.array) : A vector of photon mode indicies (n) for the output fock state.
+
+    Returns:
+        (jnp.array) : A tensor of probabilities for the input unitaries (...).
+    """
+    amplitude = calculate_amplitude(U, fock_in, fock_out)
+    return jnp.real(amplitude * amplitude.conj())

@@ -1,6 +1,8 @@
 import jax.numpy as jnp
 
-def validate_tensor_of_square_matrixces(A : jnp.array):
+def validate_tensor_of_square_matrixces(
+    A : jnp.array
+    ) -> int:
     """
     Validates a tensor of matrices (...,n,n) is a tensor of square matrices (matches shape template).
     
