@@ -40,8 +40,8 @@ def calculate_amplitude(
     m = validate_tensor_of_square_matrixces(U)
 
     # Calculate facatorials
-    counts_in  = jnp.sum(jnp.arange(m)[None, :] == fock_in[:, None], axis=0)
-    counts_out = jnp.sum(jnp.arange(m)[None, :] == fock_in[:, None], axis=0)
+    counts_in  = jnp.sum(jnp.arange(m)[None, :] == fock_in [:, None], axis=0)
+    counts_out = jnp.sum(jnp.arange(m)[None, :] == fock_out[:, None], axis=0)
 
     f1 = jnp.prod(factorial(counts_in ))
     f2 = jnp.prod(factorial(counts_out))
@@ -52,7 +52,7 @@ def calculate_amplitude(
 
 
     p = S_out @ U @ S_in.T
-    amplitude = jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
+    a = jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
     
     jax.debug.print(
         'U={U}\n' +
@@ -62,7 +62,8 @@ def calculate_amplitude(
         'counts_out={counts_out}\n' +
         'f1={f1}\n' + 
         'f2={f2}\n' + 
-        'p={p}\n',
+        'p={p}\n'
+        'a={a}',
         U=U,
         fock_in=fock_in,
         fock_out=fock_out,
@@ -70,6 +71,7 @@ def calculate_amplitude(
         counts_out=counts_out,
         f1=f1,
         f2=f2,
-        p=p)
+        p=p,
+        a=a)
 
-    return amplitude
+    return a

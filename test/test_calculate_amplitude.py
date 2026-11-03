@@ -1,3 +1,4 @@
+import itertools
 
 import jax
 import jax.numpy as jnp
@@ -49,3 +50,38 @@ def test_calculated_amplitudes_for_uniform_in_and_out_are_matrix_permanent():
     amplitude = calculate_amplitude(mat, fock, fock)
 
     assert jnp.allclose(perm, amplitude)
+
+def test_unitary_amplitudes_for_n_photon_state_sum_to_one():
+    m = 2
+    n = 5
+
+    phi1  = jax.random.uniform(jax.random.key(0)) * 2 * jnp.pi
+    phi2  = jax.random.uniform(jax.random.key(1)) * 2 * jnp.pi
+    theta = jax.random.uniform(jax.random.key(2)) * (jnp.pi / 2)
+
+    alpha = jnp.exp(1j * phi1) * jnp.sin(theta)
+    beta  = jnp.exp(1j * phi2) * jnp.cos(theta)
+
+    U = jnp.array([
+        [alpha, beta],
+        [beta.conj(), -alpha.conj()]
+    ])
+
+
+    for fock_in in itertools.combinations_with_replacement(range(m), n):
+        prob = 0
+        for fock_out in itertools.combinations_with_replacement(range(m), n):
+            amplitude = calculate_amplitude(U, jnp.array(fock_in), jnp.array(fock_out))
+            prob += jnp.real(amplitude * amplitude.conj())
+
+        print(f'prob={prob}')
+
+        assert jnp.isclose(prob, 1.0)
+
+
+test_unitary_amplitudes_for_n_photon_state_sum_to_one()
+
+
+
+
+
