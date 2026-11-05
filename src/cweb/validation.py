@@ -10,10 +10,25 @@ def validate_tensor_of_square_matrixces(
         A (jnp.array) : Tensor of square matrices (...,n,n).
     
     Returns:
-        (int) : n the dimension of the square matrices.
+        int : n the dimension of the square matrices.
     """
     assert len(A.shape) >= 2
     n = A.shape[-1]
     assert A.shape[-2] == n
 
     return n
+
+def validate_tensor_of_vectors(
+        A: jnp.array
+    ) -> int:
+    """
+    Validates a tensor of vectors (...,n) is a tensor of vectors (matches shape template).
+
+    Args:
+        A (jnp.array) : tensor of vectors (...,n).
+
+    Returns:
+        int : n the dimension of the vectors.
+    """
+    assert len(A.shape) >= 1
+    return A.shape[-1]
