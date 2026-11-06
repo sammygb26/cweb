@@ -53,7 +53,7 @@ def parse_clements_column(params : dict) -> jnp.array:
         params (dict) : A dictionary of parameters containing the phases (...m).
 
     Returns:
-        A tensor of unitaries matching the phases (...,m,m).    
+        jnp.array : A tensor of unitaries matching the phases (...,m,m).    
     """
     # Validation
     assert (CLEMENTS_PRIMARY_COLUMN   in params or 
