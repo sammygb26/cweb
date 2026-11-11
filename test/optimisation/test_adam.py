@@ -30,7 +30,7 @@ def test_adam_on_toy_problem():
             data=data,
             beta1=0.9, 
             beta2=0.999,
-            alpha=1e-3,
+            alpha=1.0,
             epsilon=1e-8)
 
         return (model, m1, m2), loss
@@ -85,7 +85,7 @@ def test_adam_on_toy_pytree_problem():
             data=data,
             beta1=0.9, 
             beta2=0.999,
-            alpha=1e-3,
+            alpha=1.0,
             epsilon=1e-8)
 
         return (model, m1, m2), loss
@@ -96,5 +96,3 @@ def test_adam_on_toy_pytree_problem():
 
     assert jnp.allclose(jnp.array(jax.tree.leaves(model)), 0.0, atol=1e-4)
     assert jnp.allclose(loss[-1]                         , 0.0, atol=1e-4)
-
-test_adam_on_toy_pytree_problem()
