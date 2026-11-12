@@ -1,4 +1,4 @@
 jax
 pytest
 pandas
-tqdm
+jax_tqdm

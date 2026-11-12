@@ -21,6 +21,6 @@ rm -rf "${JOB_CACHE_DIR}"/*
 
 cd $HOME/cweb
 
-source venv2/bin/activate
+source venv1/bin/activate
 
 python -m runs.clements_represents_unitary.run

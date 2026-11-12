@@ -18,7 +18,7 @@ def execute_run(l : u.Logger, dl : u.DataLogger, dim : int):
 
     key = jax.random.key(dim)
     unitary = jax.random.orthogonal(key, dim, dtype=jnp.complex64)
-    epochs = int(40_000)
+    epochs = int(50_000)
 
     # Generate and randomize clements scheme
     clements_params = m.make_fully_trainable_clements_params(dim=dim)
