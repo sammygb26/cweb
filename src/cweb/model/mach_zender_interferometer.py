@@ -45,30 +45,30 @@ def mach_zender_interferometer(
     phases : jnp.array
     ) -> jnp.array:
     """
-    Converts two phase values into a unitary reprisenting the an MZI interferometer for B(0.5)P(t1,t2)B(0.5)
-    where B is a beam splitter and P is a two-mode phase shifter.
+    Converts two phase values into a unitary reprisenting the an MZI interferometer for P(t1)B(0.5)P(t2)B(0.5)
+    where B is a beam splitter and P is a one-mode phase shifter.
 
     Args:
-        theta1 (jnp.array) :
+        phases (jnp.array) : The phases (...,2), t1 = [...,0], t2 = [...,1]
 
     Returns:
-        jnp.array
+        jnp.array : A tensor of unitaries (...,2,2) matching the linear unitary of the MZI.
     """
     assert phases.shape[-1] == 2
 
     theta1 = phases[...,0]
     theta2 = phases[...,1]
 
-    d12 = (theta1 - theta2) / 2
-    m12 = (theta1 + theta2) / 2
+    t2o2 = 0.5 * theta2
 
-    em12 = jnp.exp(1j * m12)
-    sd12 = jnp.sin(d12)
-    cd12 = jnp.cos(d12)
+    et1   = jnp.exp(1j * theta1)
+    et2o2 = jnp.exp(1j * t2o2)
+    st2o2 = jnp.sin(t2o2)
+    ct2o2 = jnp.cos(t2o2)
 
-    unitary = 1j * em12 * jnp.array([
-        [sd12,  cd12],
-        [cd12, -sd12]
+    unitary = 1j * et2o2 * jnp.array([
+        [st2o2 * et1,  ct2o2 * et1],
+        [ct2o2      , -st2o2      ]
     ])
 
     return jnp.moveaxis(unitary, (0,1), (-1, -2))

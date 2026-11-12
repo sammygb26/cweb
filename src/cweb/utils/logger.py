@@ -22,6 +22,7 @@ class Logger:
         Args:
             string (str) : S tring to be logged.
         """
+        print(line)
         with open(self.path, 'a+') as file:
             file.write(line + '\n')
 

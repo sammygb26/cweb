@@ -1,2 +1,4 @@
 jax
 pytest
+pandas
+tqdm

@@ -1,6 +1,6 @@
 import os
 import pickle
-import jax.numpy as jnp
+import pandas as pd
 
 class DataLogger:
     def __init__(self, folder):
@@ -23,4 +23,12 @@ class DataLogger:
         path = os.path.join(self.folder, subpath)
         with open(path, 'rb') as file:
             return pickle.load(file)
+
+    def save_df(self, subpath : str, df : pd.DataFrame) -> None:
+        path = os.path.join(self.folder, subpath)
+        df.to_csv(path)
+
+    def load_df(self, subpath : str) -> pd.DataFrame:
+        path = os.path.join(self.folder, subpath)
+        return pd.read_csv(path)
 

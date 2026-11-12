@@ -4,6 +4,7 @@ from .clements_column import make_clements_secondary_column_params
 
 from .clements import parse_clements
 from .clements import make_clements_params
+from .clements import make_fully_trainable_clements_params
 
 from .mach_zender_interferometer import parse_mach_zender_interferometer
 from .mach_zender_interferometer import make_mach_zender_interferometer_params
