@@ -3,14 +3,12 @@ from cweb.model import parse_mach_zender_interferometer, make_mach_zender_interf
 import jax
 import jax.numpy as jnp
 
-def test_mzi_with_equal_phases_is_proportional_to_x_gate():
+def test_mzi_with_external_phases_only_proportional_to_x_gate_and_phases_shifter():
     thetas = jnp.arange(0, 2 * jnp.pi, 0.1)
-    phases = jnp.array([[theta, theta] for theta in thetas])
+    phases = jnp.array([[theta, 0] for theta in thetas])
     params = make_mach_zender_interferometer_params(phases=phases)
 
-    x_gate = jnp.array([[0, 1], [1, 0]])
-
-    expected = jnp.array([1j * x_gate * jnp.exp(1j * theta) for theta in thetas])
+    expected = jnp.array([1j * jnp.array([[0, 1], [jnp.exp(1j * theta), 0]]) for theta in thetas])
     actual   = parse_mach_zender_interferometer(params)
 
     print(expected)

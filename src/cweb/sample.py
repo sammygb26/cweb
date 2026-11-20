@@ -58,26 +58,6 @@ def calculate_amplitude(
 
     p = S_out @ U @ S_in.T
     a = jnp.power(f1 * f2, -0.5) * calculate_permanent(p)
-    
-    #jax.debug.print(
-    #    'U={U}\n' +
-    #    'fock_in={fock_in}\n' + 
-    #    'fock_out={fock_out}\n' +
-    #    'counts_in={counts_in}\n' +
-    #    'counts_out={counts_out}\n' +
-    #    'f1={f1}\n' + 
-    #    'f2={f2}\n' + 
-    #    'p={p}\n'
-    #    'a={a}',
-    #    U=U,
-    #    fock_in=fock_in,
-    #    fock_out=fock_out,
-    #    counts_in=counts_in,
-    #    counts_out=counts_out,
-    #    f1=f1,
-    #    f2=f2,
-    #    p=p,
-    #    a=a)
 
     return a
 
