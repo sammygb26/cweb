@@ -9,8 +9,7 @@ def random_phases(key : ArrayLike, shape : ShapeDtypeStruct):
     return jax.random.uniform(key, shape) * 2 * jnp.pi
 
 def fold_in_path(key : ArrayLike, path : any):
-    path_str = str(any)
-    crc = zlib.crc32(bytes(path_str, encoding='utf-8'))
+    crc = zlib.crc32(bytes(str(path), encoding='utf-8'))
     return jax.random.fold_in(key, crc)
 
 

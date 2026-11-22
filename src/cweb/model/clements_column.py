@@ -25,6 +25,15 @@ class ClementsColumn:
         """
         validate_tensor_of_vectors(self.phases)
 
+    def __str__(self) -> str:
+        """
+        Gets the string reprisentation of the clements column.
+
+        Returns:
+            str : The string representation of the clements column.
+        """
+        return f'ClementsColumn({self.phases}, {"primary" if self.is_primary else "secondary"})'
+
     def get_m(self):
         """
         Gets the numbner of modes this column is defined for.

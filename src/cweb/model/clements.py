@@ -31,12 +31,14 @@ class Clements:
         Arguments:
             m (int) : The number of modes for the clements scheme.        
         """
+        diagonal_phases = jnp.zeros(m)
+
         columns = [
             ClementsColumn(jnp.zeros(m), i % 2 == 0)
             for i in range(m)
         ]
 
-        return Clements(columns)
+        return Clements(diagonal_phases, columns)
 
     def __post_init__(self):
         """
@@ -55,6 +57,24 @@ class Clements:
         for column in self.columns:
             m_c = column.get_m()
             assert m_c == m, f'Attempt to make clements scheme with column mode count ({m_c}) not matching overall ({m}).'
+
+    def __str__(self) -> str:
+        """
+        Gets the string reperisentation of the clements scheme.
+
+        Returns:
+            str : The string representation of the clements scheme.
+        """
+        lines = []
+
+        lines.append(f'Clements(')
+        lines.append(f'    {self.diagonal_phases}')
+        lines.append(f'    [')
+        lines +=    [f'        {c}' for c in self.columns]
+        lines.append(f'    ]')
+        lines.append(f')')
+
+        return '\n'.join(lines)
 
     def get_m(self) -> int:
         """
