@@ -1,21 +1,24 @@
 import functools
 import itertools
-import dataclasses
+
+from dataclasses import dataclass, field
 
 import jax
 import jax.numpy as jnp
 
 from cweb.validation import validate_tensor_of_vectors
-
-FIXED_PHOTON_COUNT_MIXED_STATE = 'fixed_photon_count_mixed_state'
-FOCK_STATES                    = 'fock_state'
-PROBABILITIES                  = 'probabilites'
+from cweb.validation import validate_matrix
 
 @jax.tree_util.register_dataclass
-@dataclasses.dataclass
+@dataclass
 class FixedPhotonCountMixedFockState:
     fock_states   : jnp.array
     probabilities : jnp.array
+
+    def __post_init__(self):
+        state_count, _ = validate_matrix(self.fock_states)
+        assert state_count == validate_tensor_of_vectors(self.probabilities)
+
 
     @classmethod
     def complete(cls, m : int, n : int) -> FixedPhotonCountMixedFockState:
