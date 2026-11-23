@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import jax
 
@@ -7,9 +9,18 @@ from .fixed_photon_count_mixed_fock_state import FixedPhotonCountMixedFockState
 @jax.tree_util.register_dataclass
 @dataclasses.dataclass
 class MixedFockState:
+    """
+    Representation of a mixed fock state where states have a variety of photon numbers.
+
+    Attributes:
+        states (dict[int, FixedPhotonCountMixedFockState]) : A dictionary of states and probabilities sorted by photon number.
+    """
     states : dict[int, FixedPhotonCountMixedFockState]
 
     def __post_init__(self):
+        """
+        Post initialisation validating the arugments passed to the constructor are valid.
+        """
         for n, state in self.states.items():
             assert state.get_n() == n, 'Attempt to initialised MixedFockState with incorrect photon numbers.'
         
@@ -17,6 +28,16 @@ class MixedFockState:
             self,
             fn : Callable[[FixedPhotonCountMixedFockState], FixedPhotonCountMixedFockState]
         ) -> MixedFockState:
+        """
+        Applies a photon preserving operations (FixedPhotonCountMixedFockState -> FixedPhotonCountMixedFockState) returning
+        the resultant mixed state.
+
+        Args:
+            fn (Callable[[FixedPhotonCountMixedFockState], FixedPhotonCountMixedFockState]) : A function which transformes a fixed photon mixed fock state.
+
+        Returns:
+            MixedFockState : The state which results after the transformation.
+        """
 
         @jax.jit
         def scan_fn(output_states, state):
