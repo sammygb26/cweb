@@ -94,8 +94,8 @@ def calculate_probabilities(
     """
     Calculates the probabilities of all outputs maintaining photon number.
     """
-    m = validate_tensor_of_square_matrixces(U)
-    n = validate_vector(fock_in)
+    validate_tensor_of_square_matrixces(U)
+    validate_vector(fock_in)
 
     @jax.jit
     def f(carry, fock_out):
@@ -107,13 +107,21 @@ def calculate_probabilities(
     return probabilities
     
 
-# TODO: Test with multiindex U matching input probabilities.
-
 @jax.jit
 def apply_unitary_and_measure(
         U : jnp.array,
         input_state : FixedPhotonCountMixedFockState 
     ) -> FixedPhotonCountMixedFockState:
+    """
+    Applies a linear optical network represented by a unitary to a mixed fock state.
+
+    Args:
+        U (jnp.array)                            : A tensor of unitaries (...,m,m) to be used.
+        input_state (FixedPhotonCountMixedState) : The mixed state to be transformed.
+
+    Returns:
+        FixedPhotonCountMixedFockState : The state after the transformation.
+    """
 
     # Validate the input
     m = validate_tensor_of_square_matrixces(U)
@@ -121,21 +129,21 @@ def apply_unitary_and_measure(
     n           = input_state.get_n()
     state_count = input_state.get_state_count()
 
-    init = FixedPhotonCountMixedFockState.complete(m, n)
-
     @jax.jit
     def scan_fn(output_state : FixedPhotonCountMixedFockState, i):
         # Get the next fock state and its probability
         fock_in = input_state.fock_states  [i]
-        p       = input_state.probabilities[i]
+        p       = input_state.probabilities[...,i]
 
         # Calculate the probabilities for the output states
         ps = calculate_probabilities(U, fock_in, output_state.fock_states)
 
         # Add those probabilities scales by the probability of the input state
-        output_state = output_state.add_probabilities(ps * p)
+        output_state = output_state.add_probabilities(ps * p[...,None])
 
         return output_state, None
-        
-    final_state, _ = jax.lax.scan(scan_fn, init, jnp.arange(state_count))
+
+    init, _ = scan_fn(FixedPhotonCountMixedFockState.complete(m, n), 0)
+    final_state, _ = jax.lax.scan(scan_fn, init, jnp.arange(state_count - 1) + 1)
+
     return final_state

@@ -38,5 +38,24 @@ def test_calculate_probabilities_on_complete_state_summs_to_1():
     assert jnp.allclose(sum(probabilities), 1.0)
 
 
+def test_calculate_probabilities_on_complete_state_summs_to_1_for_tensor_of_unitaries():
+    m = 2
+    n = 3
+
+    unitary = jnp.array([
+        jax.random.orthogonal(jax.random.key(i), m, dtype=jnp.complex64)
+        for i in range(20)
+    ])
+
+    fock_in = jnp.arange(n)
+
+    complete_out = FixedPhotonCountMixedFockState.complete(m, n)
+    fock_in = complete_out.fock_states[4]
+
+    probabilities = calculate_probabilities(unitary, fock_in, complete_out.fock_states)
+
+    print(jnp.sum(probabilities, axis=-1))
+
+    assert jnp.allclose(jnp.sum(probabilities, axis=-1), 1.0)
 
     
