@@ -44,7 +44,7 @@ class ReuploadingClementsColumn:
         return self.indices.shape[-1]
 
     @jax.jit
-    def get_clements_column(self, data : jax.array) -> ClementsColumn:
+    def get_clements_column(self, data : jax.Array) -> ClementsColumn:
         """
         Gets the clements clements colum representation using the provided data as the phases.
 
