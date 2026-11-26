@@ -4,6 +4,7 @@ from ..validation import validate_tensor_of_vectors
 from dataclasses import dataclass, field
 from jax.tree_util import register_dataclass
 
+import jax
 import jax.numpy as jnp
 
 @register_dataclass

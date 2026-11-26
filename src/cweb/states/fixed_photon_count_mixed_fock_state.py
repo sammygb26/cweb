@@ -18,11 +18,11 @@ class FixedPhotonCountMixedFockState:
     Represents a mixed fock state where the photon number is known.
 
     Attributes:
-        fock_states (jnp.array)   : An matrix (s,n) where each row reprisents a mode index representation of some particular fock state.
-        probabilities (jnp.array) : A tensor (...,s) of probabilities for each state.
+        fock_states (jax.Array)   : An matrix (s,n) where each row reprisents a mode index representation of some particular fock state.
+        probabilities (jax.Array) : A tensor (...,s) of probabilities for each state.
     """
-    fock_states   : jnp.array
-    probabilities : jnp.array
+    fock_states   : jax.Array 
+    probabilities : jax.Array
 
     def __post_init__(self):
         """
@@ -31,21 +31,34 @@ class FixedPhotonCountMixedFockState:
         state_count, _ = validate_matrix(self.fock_states)
         assert state_count == validate_tensor_of_vectors(self.probabilities)
 
-
     @classmethod
-    def complete(cls, m : int, n : int) -> FixedPhotonCountMixedFockState:
+    def complete(
+            cls,
+            m : int, 
+            n : int,
+            probabilities : jax.Array = None
+        ) -> FixedPhotonCountMixedFockState:
         """
         Creates a complete mixed state meaning all possible fock states (for a given photon number) are represented.
 
         Args:
-            m (int) : The number of modes.
-            n (int) L The number of phtoons.
+            m (int)                 : The number of modes.
+            n (int)                 : The number of phtoons.
+            fock_states (jax.Array) : The probabilities for the different states (0 if unset).
 
         Returns:
             FixedPhotonCountMixedFockState : The reprisentation of the mixed state with all probabilities set to 0.
         """
         fock_states = get_complete_combinations(m, n)
-        return FixedPhotonCountMixedFockState(fock_states, jnp.zeros((fock_states.shape[0])))
+
+        # Fill with zeros if unset.
+        if probabilities is None:
+            probabilities = jnp.zeros((fock_states.shape[0]))
+
+        return FixedPhotonCountMixedFockState(
+            fock_states=fock_states,
+            probabilities=probabilities
+        )
 
     def add_probabilities(
         self,
@@ -88,7 +101,6 @@ def get_complete_combinations(m : int, n : int) -> jnp.array:
 
     Returns:
         jnp.array : (N,n) matrix of combinations of indexes for n photons into m modes.
-    
     """
     combs = itertools.combinations_with_replacement(range(m), n)
     return jnp.array(list(combs))

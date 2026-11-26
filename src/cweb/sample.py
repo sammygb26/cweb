@@ -107,16 +107,15 @@ def calculate_probabilities(
     return probabilities
     
 
-@jax.jit
 def apply_unitary_and_measure(
-        U : jnp.array,
+        U : jax.Array,
         input_state : FixedPhotonCountMixedFockState 
     ) -> FixedPhotonCountMixedFockState:
     """
     Applies a linear optical network represented by a unitary to a mixed fock state.
 
     Args:
-        U (jnp.array)                            : A tensor of unitaries (...,m,m) to be used.
+        U (jax.Array)                            : A tensor of unitaries (...,m,m) to be used.
         input_state (FixedPhotonCountMixedState) : The mixed state to be transformed.
 
     Returns:

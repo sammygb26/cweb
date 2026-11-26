@@ -62,10 +62,6 @@ def adam_update(
             updated m1 and m2 estimates and the current loss.
     """
 
-    # Calculate loss and grad
-    loss = loss_fn(model, data)
-    g = jax.grad(loss_fn)(model, data)
-
     # Calculate updated step size
     b1t = jnp.power(beta1, step + 1)
     b2t = jnp.power(beta2, step + 1)
@@ -74,7 +70,7 @@ def adam_update(
 
     # Calculate loss and moments
     loss = loss_fn(model, data)
-    g  = jax.grad(loss_fn)(model, data)
+    g = jax.grad(loss_fn, allow_int=True)(model, data)
     g2 = jax.tree.map(jnp.square, g)
 
     # Calculated exponential smoothed moments
