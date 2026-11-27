@@ -11,7 +11,7 @@ def random_phases(key : ArrayLike, shape : ShapeDtypeStruct) -> jax.Array:
 
 def random_probabilities(key : ArrayLike, shape : ShapeDtypeStruct):
     ps = jax.random.uniform(key, shape)
-    ps = ps / jnp.sum(ps, axis=-1)
+    ps = ps / jnp.sum(ps, axis=-1)[...,None]
     return ps
 
 def complete_count(m, n):
