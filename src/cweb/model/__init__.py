@@ -10,3 +10,4 @@ from .mach_zender_interferometer import MachZenderInterferometer
 # Basic classification
 from .affine_layer import AffineLayer
 from .softmax import softmax
+from .cross_entropy import cross_entropy
