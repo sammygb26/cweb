@@ -1,73 +1,101 @@
-import functools
+from __future__ import annotations
 
+from dataclasses import dataclass
+from jax.tree_util import register_dataclass
+
+import functools
 import jax
 import jax.numpy as jnp
 
-from .clements_column import parse_clements_column
-from .clements_column import make_clements_primary_column_params
-from .clements_column import make_clements_secondary_column_params
+from .clements_column import ClementsColumn
 
-CLEMENTS        = 'clements'
-DIAGONAL_PHASES = 'diagonal_phases'
-COLUMNS         = 'columns'
+from cweb.validation import validate_tensor_of_vectors
 
-def make_fully_trainable_clements_params(dim : int):
-    columns = []
-    zero_phases = jnp.zeros((dim))
-    for i in range(dim):
-        make_clements_column_params = [
-            make_clements_primary_column_params,
-            make_clements_secondary_column_params
-        ][i % 2]
-
-        columns.append(make_clements_column_params(phases=zero_phases))
-
-    return make_clements_params(
-        diagonal_phases=zero_phases,
-        columns=columns
-    )
-
-@jax.jit
-def make_clements_params(diagonal_phases : jnp.array, columns : list[dict]) -> dict:
+@register_dataclass
+@dataclass
+class Clements:
     """
-    Converts a list of column parameters for a clements scheme into clements params ready to be parsed.
+    A clements schemem made of a layer of diagonal phase shifters
+    followed my clements columns (a stack of MZIs).
 
-    Note: This function does not verify the columns themselves reprisent a clements scheme or even that
-        the layers are mode compatible.
-
-    Args:
-        columns (list) : A list of columns params for the clements scheme.
-
-    Returns:
-        dict : The parameters for the clements scheme ready to be parsed.
+    Attributes:
+        diagonal_phases (jnp.array)    : An array of initial phases shifter sof reach layer.
+        columns (list[ClementsColumn]) : A list of layers of MZI stacks.
     """
+    diagonal_phases : jnp.array
+    columns : list[ClementsColumn]
 
-    return {
-        CLEMENTS        : [],
-        DIAGONAL_PHASES : diagonal_phases,
-        COLUMNS         : columns
-    }
+    @classmethod
+    def fully_trainable(cls, m : int) -> Clements:
+        """
+        Creates a fully trainable clements scheme - e.g a trainable unitary encoded as a clements scheme.
 
-@jax.jit
-def parse_clements(params : dict) -> jnp.array:
-    """
-    Parses clements parameters into a tensor of unitaries matching the dimension of the clements layers (...,m) or (m).
+        Arguments:
+            m (int) : The number of modes for the clements scheme.        
+        """
+        diagonal_phases = jnp.zeros(m)
 
-    Args:
-        params (dict) : Parameters for the clements model containing columns with clements column (primary and secondary) parameters.
+        columns = [
+            ClementsColumn(jnp.zeros(m), i % 2 == 0)
+            for i in range(m)
+        ]
 
-    Returns:
-        jnp.array : A tensor of unitaries (...,m,m) which would be implemented by the clements scheme.
-    """
-    # Validate parameters
-    assert CLEMENTS        in params, 'Attempt to parse non-clements parameters'
-    assert DIAGONAL_PHASES in params, 'Attempt to parse clements parameters with no diagonal phases'
-    assert COLUMNS         in params, 'Attempt to parse clements parameters no columns'
-    assert len(params[COLUMNS]) >= 1, 'Attempt to parse clements parameters with empty columns'
+        return Clements(diagonal_phases, columns)
 
-    columns = params[COLUMNS]
-    column_unitaries = [parse_clements_column(x) for x in columns]
+    def __post_init__(self):
+        """
+        Post initialisation validating the arugments passed to the constructor are valid.
+        """
+        # Check we have some columns at least.
+        assert len(self.columns) != 0, 'Attempt to make clements scheme with no columns.'
 
-    diagonal = jnp.diag(jnp.exp(1j * params[DIAGONAL_PHASES]))
+        m = self.get_m()
 
-    return diagonal @ functools.reduce(jnp.matmul, column_unitaries)
+        # Validates diagonal phases match mode count
+        m_d = validate_tensor_of_vectors(self.diagonal_phases)
+        assert m == m_d, f'Attempt to make clements scheme with diagonal mode count ({m_d}) not matching overall ({m}).'
+
+        # Check all columns match mode count
+        for column in self.columns:
+            m_c = column.get_m()
+            assert m_c == m, f'Attempt to make clements scheme with column mode count ({m_c}) not matching overall ({m}).'
+
+    def __str__(self) -> str:
+        """
+        Gets the string reperisentation of the clements scheme.
+
+        Returns:
+            str : The string representation of the clements scheme.
+        """
+        lines = []
+
+        lines.append(f'Clements(')
+        lines.append(f'    {self.diagonal_phases}')
+        lines.append(f'    [')
+        lines +=    [f'        {c}' for c in self.columns]
+        lines.append(f'    ]')
+        lines.append(f')')
+
+        return '\n'.join(lines)
+
+    def get_m(self) -> int:
+        """
+        Gets the number of modes the clements scheme is for.
+
+        Returns:
+            int : The number of modes.
+        """
+        return self.diagonal_phases.shape[-1]
+
+    @jax.jit
+    def get_unitary(self) -> jnp.array:
+        """
+        Gets the unitary encoded in the clements scheme.
+
+        Returns:
+            jnp.array : A tensor of unitaries matching the clements columns dimensions.
+        """
+        column_unitaries = [c.get_unitary() for c in self.columns]
+        diagonal = jnp.diag(jnp.exp(1j * self.diagonal_phases))
+
+        return diagonal @ functools.reduce(jnp.matmul, column_unitaries)

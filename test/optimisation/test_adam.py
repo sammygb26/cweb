@@ -5,6 +5,8 @@ import jax.numpy as jnp
 
 from functools import partial
 
+import dataclasses
+
 def test_adam_on_toy_problem():
     @jax.jit
     def loss_fn(x : jnp.array, data : jnp.array):
@@ -69,6 +71,57 @@ def test_adam_on_toy_pytree_problem():
         'x1' : jnp.array([0.2]),
         'x2' : jnp.array([1.5])
     }
+
+    epochs = 1_000
+
+    @jax.jit
+    def update(carry, step):
+        model, m1, m2 = carry
+
+        model, m1, m2, loss = adam_update(
+            model=model, 
+            m1=m1, 
+            m2=m2, 
+            step=step, 
+            loss_fn=loss_fn,
+            data=data,
+            beta1=0.9, 
+            beta2=0.999,
+            alpha=1.0,
+            epsilon=1e-8)
+
+        return (model, m1, m2), loss
+
+    init = adam_get_init(model)
+    carry, loss = jax.lax.scan(update, init, jnp.arange(epochs)) 
+    model = adam_extract_model_from_carry(carry)
+
+    assert jnp.allclose(jnp.array(jax.tree.leaves(model)), 0.0, atol=1e-4)
+    assert jnp.allclose(loss[-1]                         , 0.0, atol=1e-4)
+
+def test_adam_on_toy_dataclass_problem():
+
+    @jax.tree_util.register_dataclass
+    @dataclasses.dataclass
+    class ModelClass:
+        x1 : jax.Array
+        x2 : jax.Array
+
+    @jax.tree_util.register_dataclass
+    @dataclasses.dataclass
+    class DataClass:
+        a1 : jnp.array
+        a2 : jnp.array
+
+    @jax.jit
+    def loss_fn(model : ModelClass, data : DataClass):
+        x12 = model.x1 * model.x1
+        x22 = model.x2 * model.x2
+
+        return jnp.sum(data.a1 * x12 + data.a2 * x22)
+
+    data = DataClass(0.5, 2.0)
+    model = ModelClass(0.2, 1.5)
 
     epochs = 1_000
 

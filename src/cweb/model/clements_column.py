@@ -1,85 +1,71 @@
-from .mach_zender_interferometer import mach_zender_interferometer
+from .mach_zender_interferometer import MachZenderInterferometer
 from ..validation import validate_tensor_of_vectors
+
+from dataclasses import dataclass, field
+from jax.tree_util import register_dataclass
 
 import jax
 import jax.numpy as jnp
 
-CLEMENTS_PRIMARY_COLUMN   = 'clements_primary_column'
-CLEMENTS_SECONDARY_COLUMN = 'clements_secondary_column'
-PHASES                    = 'phases'
-
-@jax.jit
-def make_clements_primary_column_params(phases : jnp.array) -> dict:
+@register_dataclass
+@dataclass
+class ClementsColumn:
     """
-    Parses the phases for a clements primary column (always MZI passthrough on modes 1 and 2).
+    A clements column reprisented my an phase-shifter phases for MZIs assigned to pairs of modes.
 
-    Args:
-        phases (jnp.array) : Tensor of phases (...,m) including passthrough modes (phases is ignored).
-
-    Returns:
-        dict : Dictionary of parameters matching the clements primary column type.
+    Attributes:
+        phases     (jnp.array) : A tensor of phases for each mode of the scheme.
+        is_primary (bool)      : Whether this is a primary column (first MZI covers mode 0).
     """
-    validate_tensor_of_vectors(phases)
-    return {
-        CLEMENTS_PRIMARY_COLUMN : [],
-        PHASES : phases
-    }
+    phases : jnp.array
+    is_primary : int = field(metadata=dict(static=True))
 
-@jax.jit
-def make_clements_secondary_column_params(phases : jnp.array) -> dict:
-    """
-    Parses the phases for a clements secondary column (always has a passthrough on mode 1).
+    def __post_init__(self):
+        """
+        Post initialisation validating the arugments passed to the constructor are valid.
+        """
+        validate_tensor_of_vectors(self.phases)
 
-    Args:
-        phases (jnp.array) : Tensor of phases (...,m) including passthrough modes (phases is ignored).
+    def __str__(self) -> str:
+        """
+        Gets the string reprisentation of the clements column.
 
-    Returns:
-        dict : Dictionary of parameters matching the clements secondary column type.
-    """
-    validate_tensor_of_vectors(phases)
-    return {
-        CLEMENTS_SECONDARY_COLUMN : [],
-        PHASES : phases
-    }
+        Returns:
+            str : The string representation of the clements column.
+        """
+        return f'ClementsColumn({self.phases}, {"primary" if self.is_primary else "secondary"})'
 
-@jax.jit
-def parse_clements_column(params : dict) -> jnp.array:
-    """
-    Parses params into a clements column (either primary or secondary). The params contain the phases
-    (...,m) for an m mode circuit. Some phases are ignored depending on the total number of modes and 
-    whether m is odd or even.
+    def get_m(self):
+        """
+        Gets the numbner of modes this column is defined for.
+        """
+        return self.phases.shape[-1]
 
-    Args:
-        params (dict) : A dictionary of parameters containing the phases (...m).
+    def get_unitary(self):
+        """
+        Gets a tensor of unitaries encoded by the phases of this column.
 
-    Returns:
-        jnp.array : A tensor of unitaries matching the phases (...,m,m).    
-    """
-    # Validation
-    assert (CLEMENTS_PRIMARY_COLUMN   in params or 
-            CLEMENTS_SECONDARY_COLUMN in params)
-    assert PHASES                     in params
+        Returns:
+            jnp.array : A tensor of unitaries reprisenting the linear transformation of a single photon entering the column.
+        """
+        # Get offset based on whether this is a primary or secondary column
+        offset = 0 if self.is_primary else 1
+        m = self.get_m()
 
-    phases = params[PHASES]
-    m = validate_tensor_of_vectors(A=phases)
+        # Setup unitary initialy as 0s
+        unitary = jnp.zeros(list(self.phases.shape) + [m], dtype=jnp.complex64)
 
-    # Get offset based on whether this is a primary or secondary column
-    offset = 0 if CLEMENTS_PRIMARY_COLUMN in params else 1
+        # Setup passthrouhg for first and last mode
+        unitary = unitary.at[...,-1,-1].set(1)
+        unitary = unitary.at[...,0,0].set(1)
 
-    # Setup unitary initialy as 0s
-    unitary = jnp.zeros(list(phases.shape) + [m], dtype=jnp.complex64)
+        # Iterate through MZIs in column adding to unitary
+        for k in range((m  - offset) // 2):
+            i = 2 * k + offset
+            j = i + 2
 
-    # Setup passthrouhg for first and last mode
-    unitary = unitary.at[...,-1,-1].set(1)
-    unitary = unitary.at[...,0,0].set(1)
+            mzi = MachZenderInterferometer(self.phases[...,i:j])
 
-    # Iterate through MZIs in column adding to unitary
-    for k in range((m  - offset) // 2):
-        i = 2 * k + offset
-        j = i + 2
+            unitary = unitary.at[...,i:j,i:j].set(mzi.get_unitary())
 
-        mzi = mach_zender_interferometer(phases[...,i:j])
-
-        unitary = unitary.at[...,i:j,i:j].set(mzi)
-
-    return unitary
+        return unitary

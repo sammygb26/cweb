@@ -1,11 +1,8 @@
-from .clements_column import parse_clements_column
-from .clements_column import make_clements_primary_column_params
-from .clements_column import make_clements_secondary_column_params
+# Reuploading
+from .reuploading_clements import ReuploadingClements
+from .reuploading_clements_column import ReuploadingClementsColumn
 
-from .clements import parse_clements
-from .clements import make_clements_params
-from .clements import make_fully_trainable_clements_params
-
-from .mach_zender_interferometer import parse_mach_zender_interferometer
-from .mach_zender_interferometer import make_mach_zender_interferometer_params
-
+# Basic MZI based clements scheme
+from .clements import Clements
+from .clements_column import ClementsColumn
+from .mach_zender_interferometer import MachZenderInterferometer

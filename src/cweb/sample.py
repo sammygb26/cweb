@@ -5,6 +5,9 @@ from jax.scipy.special import factorial
 
 from cweb.permanent import calculate_permanent
 from cweb.validation import validate_tensor_of_square_matrixces
+from cweb.validation import validate_vector
+
+from cweb.states import FixedPhotonCountMixedFockState
 
 @jax.jit
 def calculate_indexing_matrix(
@@ -43,6 +46,7 @@ def calculate_amplitude(
         (jnp.array) : A tensor of amplitudes for the input unitaries (...).
     """
     m = validate_tensor_of_square_matrixces(U)
+    assert validate_vector(fock_in) == validate_vector(fock_out)
 
     # Calculate facatorials
     counts_in  = jnp.sum(jnp.arange(m)[None, :] == fock_in [:, None], axis=0)
@@ -61,6 +65,7 @@ def calculate_amplitude(
 
     return a
 
+@jax.jit
 def calculate_probability(
     U        : jnp.array,
     fock_in  : jnp.array,
@@ -71,11 +76,73 @@ def calculate_probability(
 
     Args:
         U        (jnp.array) : A tensor of m mode unitary matrices to be validated (...,m,m)
-        fock_in  (jnp.array) : A vector of photon mode indicies (n) for the input fock state.
-        fock_out (jnp.array) : A vector of photon mode indicies (n) for the output fock state.
+        fock_in  (jnp.array) : A vector of photon mode (in the range 0...m-1) indicies (n) for the input fock state.
+        fock_out (jnp.array) : A vector of photon mode (in the range 9...m-1) indicies (n) for the output fock state.
 
     Returns:
         (jnp.array) : A tensor of probabilities for the input unitaries (...).
     """
     amplitude = calculate_amplitude(U, fock_in, fock_out)
     return jnp.real(amplitude * amplitude.conj())
+
+@jax.jit
+def calculate_probabilities(
+        U         : jnp.array, 
+        fock_in   : jnp.array,
+        fock_outs : jnp.array,
+        ) -> jnp.array:
+    """
+    Calculates the probabilities of all outputs maintaining photon number.
+    """
+    validate_tensor_of_square_matrixces(U)
+    validate_vector(fock_in)
+
+    @jax.jit
+    def f(carry, fock_out):
+        return carry, calculate_probability(U, fock_in, fock_out)
+
+    _, probabilities = jax.lax.scan(f, (), fock_outs)
+    probabilities = jnp.moveaxis(probabilities, 0, -1)
+
+    return probabilities
+    
+
+def apply_unitary_and_measure(
+        U : jax.Array,
+        input_state : FixedPhotonCountMixedFockState 
+    ) -> FixedPhotonCountMixedFockState:
+    """
+    Applies a linear optical network represented by a unitary to a mixed fock state.
+
+    Args:
+        U (jax.Array)                            : A tensor of unitaries (...,m,m) to be used.
+        input_state (FixedPhotonCountMixedState) : The mixed state to be transformed.
+
+    Returns:
+        FixedPhotonCountMixedFockState : The state after the transformation.
+    """
+
+    # Validate the input
+    m = validate_tensor_of_square_matrixces(U)
+
+    n           = input_state.get_n()
+    state_count = input_state.get_state_count()
+
+    @jax.jit
+    def scan_fn(output_state : FixedPhotonCountMixedFockState, i):
+        # Get the next fock state and its probability
+        fock_in = input_state.fock_states  [i]
+        p       = input_state.probabilities[...,i]
+
+        # Calculate the probabilities for the output states
+        ps = calculate_probabilities(U, fock_in, output_state.fock_states)
+
+        # Add those probabilities scales by the probability of the input state
+        output_state = output_state.add_probabilities(ps * p[...,None])
+
+        return output_state, None
+
+    init, _ = scan_fn(FixedPhotonCountMixedFockState.complete(m, n), 0)
+    final_state, _ = jax.lax.scan(scan_fn, init, jnp.arange(state_count - 1) + 1)
+
+    return final_state

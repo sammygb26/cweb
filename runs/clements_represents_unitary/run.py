@@ -21,26 +21,23 @@ def execute_run(l : u.Logger, dl : u.DataLogger, dim : int):
     epochs = int(50_000)
 
     # Generate and randomize clements scheme
-    clements_params = m.make_fully_trainable_clements_params(dim=dim)
-    clements_params = h.randomize_tree_phases(
+    clements = m.Clements.fully_trainable(m=dim)
+    clements = h.randomize_tree_phases(
         key=key, 
-        tree=clements_params
+        tree=clements
     )
 
     # Print a summary of the trainable model to check
-    print(
-        'Clements params\n',
-        jax.tree.map(lambda x: x.shape, clements_params)
-    )
+    print(f'{clements}')
 
     # Save the parameters before training
-    dl.save('initial_params.pkl', clements_params)
+    dl.save('initial_params.pkl', clements)
     dl.save('run_params.pkl', {'dim' : dim, 'epochs' : epochs})
 
     # Definition of the objective
     @jax.jit
-    def loss_fn(clements_params, unitary):
-        clements_unitary = m.parse_clements(clements_params)
+    def loss_fn(clements : m.Clements, unitary : jnp.array):
+        clements_unitary = clements.get_unitary()
         return jnp.mean(jnp.abs(clements_unitary - unitary))
 
     # Definition of how adam will be used
@@ -65,18 +62,18 @@ def execute_run(l : u.Logger, dl : u.DataLogger, dim : int):
         return (model, m1, m2), loss
 
     # Execute adam for {epochs}
-    init = o.adam_get_init(clements_params)
-    (clements_params, _, _), loss = jax.lax.scan(update, init, jnp.arange(epochs))
+    init = o.adam_get_init(clements)
+    (clements, _, _), loss = jax.lax.scan(update, init, jnp.arange(epochs))
 
     # Log the output
     l.log(f'Completed dim {dim} run. Final loss {loss[-1]}')
     l.log(
         f'Final abs difference\n' +
-        f'{jnp.abs(unitary - m.parse_clements(clements_params))}'
+        f'{jnp.abs(unitary - clements.get_unitary())}'
     )
 
     # Save the loss and final model for later
-    dl.save('final_params.pkl', clements_params)
+    dl.save('final_params.pkl', clements)
     dl.save_df('loss.csv', pd.DataFrame({'loss' : loss}))
 
 
