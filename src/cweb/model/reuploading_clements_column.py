@@ -20,7 +20,7 @@ class ReuploadingClementsColumn:
         is_primary (bool)   : Whether this columns is primary column (top MZI interats with top mode).
     """
     data_dim   : int       = field(metadata=dict(static=True))
-    indices    : jnp.array
+    indices    : jnp.array 
     is_primary : bool      = field(metadata=dict(static=True))
 
     def __post_init__(self):
@@ -28,10 +28,9 @@ class ReuploadingClementsColumn:
         Post initialisation validating the arugments passed to the constructor are valid.
         """
 
-        assert validate_vector(self.indices) > 0, 'Attempto to make ReuploadingClementsColumn with 0 modes.'
         self.indices = self.indices.astype(jnp.int32)
-        assert jnp.all((self.indices < 0) == False), 'Attempt to make ReuploadingClementsColumn with negative indicies.'
-        assert jnp.all(self.indices < self.data_dim), 'Attempt to make ReuploadingClementsColumn with indicies outside data dim.'
+
+        assert validate_vector(self.indices) > 0,     'Attempt to make ReuploadingClementsColumn with 0 modes.'
 
     def get_m(self) -> int:
         """
